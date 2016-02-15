@@ -22,7 +22,7 @@ try{
   document.head.appendChild(css);
   
   var b = {};
-  var list = JSON.parse(window.localStorage.getItem(location.href)||"");
+  var list = JSON.parse(window.localStorage.getItem(location.href)||"{}");
   var eachFunc=function(index, ele) {
     if(index==0)return;
     ele=$(ele);
@@ -33,11 +33,13 @@ try{
     a.attr("href","javascript:void(0)");
     b[dat]=[a.text(),num];
     if(list[dat]){
-      a.css({ 'font-weight': 'bold' });
       var p = (num-list[dat][1]);
-      if(p){
+      if(p>0){
+        a.css({ 'font-weight': 'bold' });
         ele.css({color: "orangered"});
         ele.children("td:nth-child(2)").append("<span>+"+p+"</span>");
+      }else{
+        a.css({color: "gray"});
       }
     }
   };
@@ -79,11 +81,35 @@ $.getScript("http://twitter.github.io/hogan.js/builds/3.0.1/hogan-3.0.1.min.js",
         '<div class="body">{{{body}}}</div>'+
     '</div>{{/cs}}';
     var tmpl = Hogan.compile(tmp);
-    var list=JSON.parse(localStorage[location.href]||"");
+    var form = '<form class="form-horizontal" method="post" action="http://next2ch.net/test/bbs.cgi?guid=ON" accept-charset="Shift_JIS">\
+<div class="controls">\
+<input id="inputName" name="FROM" placeholder="名前（省略可）" type="text">\
+</div>\
+<div class="controls">\
+<input id="inputEmail" name="mail" placeholder="E-mail（省略可）" type="text">\
+</div>\
+<div class="control-group">\
+<div class="controls">\
+<textarea name="MESSAGE"></textarea>\
+</div>\
+</div>\
+<div class="control-group">\
+<div class="controls">\
+<input class="btn" value="投稿" type="submit">\
+</div>\
+</div>\
+<input name="suka" value="pontan" type="hidden">\
+<input name="time" value="1" type="hidden">\
+<input name="bbs" value="{{bbs}}" type="hidden">\
+<input name="key" value="{{dat}}" type="hidden">\
+</form>';
+    var post = Hogan.compile(form);
+    var list=JSON.parse(localStorage[location.href]||"{}");
   var onclickX = function(event){
     var a=event.target;
     document.title=a.innerText;
-    $.get(location.href+"dat/"+a.getAttribute("data")+".dat",{},function(data){
+    var dat = a.getAttribute("data");
+    $.get(location.href+"dat/"+dat+".dat",{},function(data){
       var x=data.split("\n").map(function(x,i){
         var s= x.split("<>");
         if(!s[3]){return null;}
@@ -108,10 +134,15 @@ $.getScript("http://twitter.github.io/hogan.js/builds/3.0.1/hogan-3.0.1.min.js",
         return {i:i+1,name:s[0],mail:s[1],ids:s[2],body:body};
       });
       x.pop();
-      $("#nb").html(tmpl.render({cs:x}));
-      list[a.getAttribute("data")]=[a.innerText,x.length];
+      var bbs = location.href.match(/next2ch\.net\/([^\/]+)\//)[1];
+      console.log(dat);
+      $("#nb").html(tmpl.render({cs:x})+post.render({bbs:bbs,dat:dat}));
+      var td=a.parentElement.parentElement;
+      td.children[1].innerHTML=x.length.toString();
+      td.setAttribute("style","");
+      a.setAttribute("style","color:gray;");
+      list[dat]=[a.innerText,x.length];
       localStorage[location.href]=JSON.stringify(list);
-      console.log(this.list);
     });
   };
   $("table#threads>tbody>tr").each(function(i,e){
