@@ -2,7 +2,7 @@
 // @name        ネッブラ
 // @namespace   n2b
 // @description next産専ブラ
-// @include     http://next2ch.net/*
+// @include     /http://next2ch.net/[^/]+//
 // @version     0
 // @grant       none
 // @require     
@@ -10,14 +10,39 @@
 // ==/UserScript==
 
 try{
+  var table = $("table#threads");
+
+  table.after("<div class='clearfix'></div>");
+  table.css({width:"35%",float:"left"});
+  table.before("<div id='nb' class='pull-right span6'></div>");
   
-function contentEval(source) {
-  source = '(' + source + ')();'
-  var script = document.createElement('script');
-  script.setAttribute("type", "application/javascript");
-  script.textContent = source;
-  document.body.appendChild(script);
-}
+  var css = document.createElement('link');
+  css.setAttribute("rel", "stylesheet");
+  css.textContent = "table#threads>tbody>tr>td>a{max-width:300px}";
+  document.head.appendChild(css);
+  
+  var b = {};
+  var list = JSON.parse(window.localStorage.getItem(location.href)||"");
+  var eachFunc=function(index, ele) {
+    if(index==0)return;
+    ele=$(ele);
+    var a = ele.children("td:first").children("a");
+    var dat = a.attr("href").match(/\/([0-9]+)/)[1];
+    var num = ele.children("td:nth-child(2)").text()|0;
+    a.attr("data",dat);
+    a.attr("href","javascript:void(0)");
+    b[dat]=[a.text(),num];
+    if(list[dat]){
+      a.css({ 'font-weight': 'bold' });
+      var p = (num-list[dat][1]);
+      if(p){
+        ele.css({color: "orangered"});
+        ele.children("td:nth-child(2)").append("<span>+"+p+"</span>");
+      }
+    }
+  };
+  $("table#threads>tbody>tr").each(eachFunc);
+  //window.localStorage.setItem(location.href,JSON.stringify(b));
   
     if (!String.fromCodePoint) {
     /*!
@@ -36,7 +61,13 @@ function contentEval(source) {
         return chars.join("");
     }
 }
-
+var contentEval = function(source) {
+  source = '(' + source + ')();'
+  var script = document.createElement('script');
+  script.setAttribute("type", "application/javascript");
+  script.textContent = source;
+  document.body.appendChild(script);
+}
 $.getScript("http://twitter.github.io/hogan.js/builds/3.0.1/hogan-3.0.1.min.js",function(){
   contentEval(function(){
    var tmp = '{{#cs}}'+
@@ -48,6 +79,7 @@ $.getScript("http://twitter.github.io/hogan.js/builds/3.0.1/hogan-3.0.1.min.js",
         '<div class="body">{{{body}}}</div>'+
     '</div>{{/cs}}';
     var tmpl = Hogan.compile(tmp);
+    var list=JSON.parse(localStorage[location.href]||"");
   var onclickX = function(event){
     var a=event.target;
     document.title=a.innerText;
@@ -77,7 +109,9 @@ $.getScript("http://twitter.github.io/hogan.js/builds/3.0.1/hogan-3.0.1.min.js",
       });
       x.pop();
       $("#nb").html(tmpl.render({cs:x}));
-      //window.localStorage.setItem(location.href,JSON.stringify(b));
+      list[a.getAttribute("data")]=[a.innerText,x.length];
+      localStorage[location.href]=JSON.stringify(list);
+      console.log(this.list);
     });
   };
   $("table#threads>tbody>tr").each(function(i,e){
@@ -85,34 +119,6 @@ $.getScript("http://twitter.github.io/hogan.js/builds/3.0.1/hogan-3.0.1.min.js",
     var a = e.children[0].children[0];
     a.addEventListener("click",onclickX,true);
   });
-  //onclickX.list=window.localStorage.getItem(location.href);
 });
 });
-
-  var b = {};
-  var list = JSON.parse(window.localStorage.getItem(location.href)|"");
-  var eachFunc=function(index, ele) {
-    if(index==0)return;
-    ele=$(ele);
-    var a = ele.children("td:first").children("a");
-    var dat = a.attr("href").match(/\/([0-9]+)/)[1];
-    var num = ele.children("td:nth-child(2)").text()|0;
-    a.attr("data",dat);
-    a.attr("href","javascript:void(0)");
-    b[dat]=[a.text(),num];
-    if(list[dat]){
-      a.css({ 'font-weight': 'bold' });
-      ele.children("td:nth-child(2)").append("<span>+"+(num-list[dat][1])+"</span>");
-    }
-  };
-  $("table#threads>tbody>tr").each(eachFunc);
-  window.localStorage.setItem(location.href,JSON.stringify(b));
-  $("table#threads>tbody>tr>td:first").css({"max-width":"300px"});
-  $("table#threads").css({width:"35%",float:"left"});
-  var main = $("<div id='nb'></div>");
-  main.insertBefore("table#threads");
-  main.css({float:"right","max-width":"600px"});
-  var c = $("<div></div>");
-  c.insertAfter("table#threads");
-  c.css({clear:"both"});
 }catch(e){console.log(e);}
