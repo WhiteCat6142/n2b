@@ -2,7 +2,7 @@
 // @name        ネッブラ
 // @namespace   n2b
 // @description next産専ブラ
-// @include     /http://next2ch.net/[^/]+//
+// @include     /http://next2ch.net/[^/]+/$/
 // @version     0
 // @grant       none
 // @require     
@@ -11,14 +11,21 @@
 try {
   var table = $('table#threads');
   table.after('<div class=\'clearfix\'></div>');
-  table.css({
-    width: '35%',
-    float: 'left'
-  });
   table.before('<div id=\'nb\' class=\'pull-right span6\'></div>');
-  var css = document.createElement('link');
-  css.setAttribute('rel', 'stylesheet');
-  css.textContent = 'table#threads>tbody>tr>td>a{max-width:300px}';
+  table.after('<div class=\'nb2\'></div>');
+  $('.nb2').css({
+    width: '45%',
+    height: '500px',
+    float: 'left',
+    overflow: 'auto'
+  });
+  table.appendTo('.nb2');
+  var css = document.createElement('style');
+  css.setAttribute('type', 'text/css');
+  css.textContent = 'table#threads>tbody>tr>td>a{max-width:300px}\n' +
+  'tr > :nth-child(3) {display: none;}'+
+    ".pop{position: absolute;background-color: lightgray;padding:6px;color:black;}"+
+    "#nb .body span{color:blue;}";
   document.head.appendChild(css);
   $('.title').after('<a onclick="localStorage.clear()">reset</a>');
   var b = {
@@ -122,7 +129,30 @@ try {
       '<input name="key" value="{{dat}}" type="hidden">' +
       '</form>';
       var post = Hogan.compile(form);
+      var showPop=function(a){
+        var id = this.innerText.substr(2);
+        var content = $("#nb > div:nth-child("+id+")").html();
+        $(this).append("<div class='pop'>"+content+"</div>");
+      };
+      var hidePop=function(a){$(".pop").fadeOut("normal");};
       var list = JSON.parse(localStorage[location.href] || '{}');
+      var conv = function (s) {
+        var body = s.replace('<br>', '\n');
+        var b1 = body.match(/&gt;&gt;\d+/g);
+            if(b1){
+                b1.forEach(function(ele){
+                    body=body.replace(ele,"<span>"+ele+"</span>");
+                });
+            }
+        var b2 = body.match(/&amp;#\d+;/g);
+        if (b2) {
+          b2.forEach(function (ele) {
+            var x = ele.slice(6, - 1) | 0;
+            body = body.replace(ele, String.fromCodePoint(x));
+          });
+        }
+        return body;
+      }
       var onclickX = function (event) {
         var a = event.target;
         document.title = a.innerText;
@@ -134,27 +164,12 @@ try {
             if (!s[3]) {
               return null;
             }
-            var body = s[3].replace('<br>', '\n');
-            /*var b1 = body.match(/&gt;&gt;\d+/g);
-            if(b1){
-                b1.forEach(function(ele){
-                    body=body.replace(ele,"&gt;&gt;"+index);
-                });
-            }
-            */
-            var b2 = body.match(/&amp;#\d+;/g);
-            if (b2) {
-              b2.forEach(function (ele) {
-                var x = ele.slice(6, - 1) | 0;
-                body = body.replace(ele, String.fromCodePoint(x));
-              });
-            }
             return {
               i: i + 1,
               name: s[0],
               mail: s[1],
               ids: s[2],
-              body: body
+              body: conv(s[3])
             };
           });
           x.pop();
@@ -169,6 +184,8 @@ try {
             a.innerText,
             x.length
           ];
+          $("#nb .body span").mouseover(showPop);
+          $("#nb .body span").mouseout(hidePop);
           localStorage[location.href] = JSON.stringify(list);
           var td = a.parentElement.parentElement;
           td.children[1].innerHTML = x.length.toString();
