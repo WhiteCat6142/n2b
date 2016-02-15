@@ -22,18 +22,23 @@ try {
   table.appendTo('.nb2');
   var css = document.createElement('style');
   css.setAttribute('type', 'text/css');
-  css.textContent = 'table#threads>tbody>tr>td>a{max-width:300px}\n' +
-  'tr > :nth-child(3) {display: none;}'+
-    ".pop{position: absolute;background-color: lightgray;padding:6px;color:black;}"+
-    "#nb .body span{color:blue;}";
+  css.textContent = 'table#threads>tbody>tr>td>a{max-width:300px}' +
+  'tr > :nth-child(3) {display: none;}' +
+  '.pop{position: absolute;background-color: lightgray;padding:6px;color:black;}' +
+  '#nb .body span{color:blue;}';
   document.head.appendChild(css);
   $('.title').after('<a onclick="localStorage.clear()">reset</a>');
   var b = {
   };
   var list = JSON.parse(window.localStorage.getItem(location.href) || '{}');
+  var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
   var eachFunc = function (index, ele) {
     if (index == 0) return;
     ele = $(ele);
+    if (ng.indexOf(ele.children('td:nth-child(3)').text()) != - 1) {
+      ele.hide();
+      return;
+    }
     var a = ele.children('td:first').children('a');
     var dat = a.attr('href').match(/\/([0-9]+)/) [1];
     var num = ele.children('td:nth-child(2)').text() | 0;
@@ -101,8 +106,9 @@ try {
       '<div class="res">' +
       '<span class="resnum">{{i}}</span>' +
       '<span class="name">{{name}}</span>' +
-      '<span class="mail">{{mail}}</span>' +
-      '<div class="ids">{{ids}}</div>' +
+      '{{#mail}}<span class="mail">[{{mail}}]</span>{{/mail}}' +
+      '<span class="date">{{date}}</span>' +
+      '<div class="id">{{id}}</div>' +
       '<div class="body">{{{body}}}</div>' +
       '</div>{{/cs}}';
       var tmpl = Hogan.compile(tmp);
@@ -129,21 +135,24 @@ try {
       '<input name="key" value="{{dat}}" type="hidden">' +
       '</form>';
       var post = Hogan.compile(form);
-      var showPop=function(a){
+      var showPop = function (a) {
         var id = this.innerText.substr(2);
-        var content = $("#nb > div:nth-child("+id+")").html();
-        $(this).append("<div class='pop'>"+content+"</div>");
+        var content = $('#nb > div:nth-child(' + id + ')').html();
+        $(this).append('<div class=\'pop\'>' + content + '</div>');
       };
-      var hidePop=function(a){$(".pop").fadeOut("normal");};
+      var hidePop = function (a) {
+        $('.pop').fadeOut('normal');
+      };
       var list = JSON.parse(localStorage[location.href] || '{}');
+      var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
       var conv = function (s) {
         var body = s.replace('<br>', '\n');
         var b1 = body.match(/&gt;&gt;\d+/g);
-            if(b1){
-                b1.forEach(function(ele){
-                    body=body.replace(ele,"<span>"+ele+"</span>");
-                });
-            }
+        if (b1) {
+          b1.forEach(function (ele) {
+            body = body.replace(ele, '<span>' + ele + '</span>');
+          });
+        }
         var b2 = body.match(/&amp;#\d+;/g);
         if (b2) {
           b2.forEach(function (ele) {
@@ -159,23 +168,27 @@ try {
         var dat = a.getAttribute('data');
         $.get(location.href + 'dat/' + dat + '.dat', {
         }, function (data) {
-          var x = data.split('\n').map(function (x, i) {
+          var b = [
+          ];
+          var x = data.split('\n').forEach(function (x, i) {
             var s = x.split('<>');
             if (!s[3]) {
               return null;
             }
-            return {
+            var ids = s[2].split(' ID:');
+            if (ng.indexOf(ids[1]) != - 1) return null;
+            b.push({
               i: i + 1,
               name: s[0],
               mail: s[1],
-              ids: s[2],
+              date: ids[0],
+              id: ids[1],
               body: conv(s[3])
-            };
+            });
           });
-          x.pop();
           var bbs = location.href.match(/next2ch\.net\/([^\/]+)\//) [1];
           $('#nb').html(tmpl.render({
-            cs: x
+            cs: b
           }) + post.render({
             bbs: bbs,
             dat: dat
@@ -184,8 +197,8 @@ try {
             a.innerText,
             x.length
           ];
-          $("#nb .body span").mouseover(showPop);
-          $("#nb .body span").mouseout(hidePop);
+          $('#nb .body span').mouseover(showPop);
+          $('#nb .body span').mouseout(hidePop);
           localStorage[location.href] = JSON.stringify(list);
           var td = a.parentElement.parentElement;
           td.children[1].innerHTML = x.length.toString();
