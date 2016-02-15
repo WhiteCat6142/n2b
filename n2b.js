@@ -25,7 +25,8 @@ try {
   css.textContent = 'table#threads>tbody>tr>td>a{max-width:300px}' +
   'tr > :nth-child(3) {display: none;}' +
   '.pop{position: absolute;background-color: lightgray;padding:6px;color:black;}' +
-  '#nb .body span{color:blue;}';
+  '#nb > .res > .body > span{color:blue;}' +
+  '#nb > .res > .body img{max-width:200px;heigth:200px;}';
   document.head.appendChild(css);
   $('.title').after('<a onclick="localStorage.clear()">reset</a>');
   var b = {
@@ -137,17 +138,54 @@ try {
       var post = Hogan.compile(form);
       var showPop = function (a) {
         var id = this.innerText.substr(2);
-        var content = $('#nb > div:nth-child(' + id + ')').html();
+        var x = id.split(',');
+        var content = '';
+        x.forEach(function (e) {
+          if (e.indexOf('-') == - 1) content += $('#nb > div:nth-child(' + e + ')').html();
+           else {
+            var xs = e.split('-');
+            for (var i = xs[0] | 0; i <= xs[1] | 0; i++) {
+              content += $('#nb > div:nth-child(' + i + ')').html();
+            }
+          }
+        });
         $(this).append('<div class=\'pop\'>' + content + '</div>');
       };
       var hidePop = function (a) {
         $('.pop').fadeOut('normal');
       };
+              var th = 600;
+        var unveil = function() {
+          var n = document.getElementsByClassName('lazy');
+          var len = n.length;
+          if (len == 0) {
+            return;
+          }
+          var wh = screen.height + th;
+          for (var i = 0; i < len; i++) {
+            var bound = n[i].getBoundingClientRect();
+            if (bound.top > wh || bound.bottom < 0 - th) continue;
+            var ele = n[i];
+            ele.setAttribute('src', ele.getAttribute('data-src'));
+            ele.removeAttribute('data-src');
+            ele.removeAttribute('class');
+            i--;
+            len--;
+          }
+        }
+        var timer = null;
+        var listen = function() {
+          clearTimeout(timer);
+          timer = setTimeout(unveil, 75);
+        }
+        window.addEventListener('resize', listen);
+        window.addEventListener('scroll', listen);
+        listen();
       var list = JSON.parse(localStorage[location.href] || '{}');
       var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
       var conv = function (s) {
-        var body = s.replace('<br>', '\n');
-        var b1 = body.match(/&gt;&gt;\d+/g);
+        var body = s;
+        var b1 = body.match(/&gt;&gt;[\d,-]+/g);
         if (b1) {
           b1.forEach(function (ele) {
             body = body.replace(ele, '<span>' + ele + '</span>');
@@ -160,6 +198,14 @@ try {
             body = body.replace(ele, String.fromCodePoint(x));
           });
         }
+        var b3 = body.match(/h?ttps?:\/\/[0-9-_a-zA-Z.\/!#$&+,:;=@\[\]\?]+/g);
+        if (b3) {
+          b3.forEach(function (ele) {
+            var link = (ele[0] == 'h') ? ele : 'h' + ele;
+            if (link.substr( - 4).match(/.[(jpg)(png)(gif)]/)) body = body.replace(ele, '<img class="lazy" data-src="' + link + '">');
+             else body = body.replace(ele, '<a href="' + link + '">' + ele + '</a>');
+          });
+        }
         return body;
       }
       var onclickX = function (event) {
@@ -168,16 +214,16 @@ try {
         var dat = a.getAttribute('data');
         $.get(location.href + 'dat/' + dat + '.dat', {
         }, function (data) {
-          var b = [
+          var x = [
           ];
-          var x = data.split('\n').forEach(function (x, i) {
-            var s = x.split('<>');
+          data.split('\n').forEach(function (ele, i) {
+            var s = ele.split('<>');
             if (!s[3]) {
               return null;
             }
             var ids = s[2].split(' ID:');
             if (ng.indexOf(ids[1]) != - 1) return null;
-            b.push({
+            x.push({
               i: i + 1,
               name: s[0],
               mail: s[1],
@@ -188,7 +234,7 @@ try {
           });
           var bbs = location.href.match(/next2ch\.net\/([^\/]+)\//) [1];
           $('#nb').html(tmpl.render({
-            cs: b
+            cs: x
           }) + post.render({
             bbs: bbs,
             dat: dat
@@ -199,6 +245,7 @@ try {
           ];
           $('#nb .body span').mouseover(showPop);
           $('#nb .body span').mouseout(hidePop);
+          listen();
           localStorage[location.href] = JSON.stringify(list);
           var td = a.parentElement.parentElement;
           td.children[1].innerHTML = x.length.toString();
