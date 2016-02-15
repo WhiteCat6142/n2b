@@ -29,10 +29,9 @@ try {
   '#nb > .res > .body img{max-width:200px;heigth:200px;}';
   document.head.appendChild(css);
   $('.title').after('<a onclick="localStorage.clear()">reset</a>');
-  var b = {
-  };
   var list = JSON.parse(window.localStorage.getItem(location.href) || '{}');
   var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
+  var ngw = JSON.parse(window.localStorage.getItem('ngw') || '[]');
   var eachFunc = function (index, ele) {
     if (index == 0) return;
     ele = $(ele);
@@ -41,14 +40,16 @@ try {
       return;
     }
     var a = ele.children('td:first').children('a');
+    for (var i = 0; i < ngw.length; i++) {
+      if (a.text().match(ngw[i])) {
+        ele.hide();
+        return;
+      }
+    }
     var dat = a.attr('href').match(/\/([0-9]+)/) [1];
     var num = ele.children('td:nth-child(2)').text() | 0;
     a.attr('data', dat);
     a.attr('href', 'javascript:void(0)');
-    b[dat] = [
-      a.text(),
-      num
-    ];
     if (list[dat]) {
       var p = (num - list[dat][1]);
       if (p > 0) {
@@ -104,7 +105,7 @@ try {
         }
       }
       var tmp = '{{#cs}}' +
-      '<div class="res">' +
+      '<div class="res res-{{i}}">' +
       '<span class="resnum">{{i}}</span>' +
       '<span class="name">{{name}}</span>' +
       '{{#mail}}<span class="mail">[{{mail}}]</span>{{/mail}}' +
@@ -141,11 +142,11 @@ try {
         var x = id.split(',');
         var content = '';
         x.forEach(function (e) {
-          if (e.indexOf('-') == - 1) content += $('#nb > div:nth-child(' + e + ')').html();
+          if (e.indexOf('-') == - 1) content += $('#nb > .res-' + e).html() || 'あぼーん';
            else {
             var xs = e.split('-');
             for (var i = xs[0] | 0; i <= xs[1] | 0; i++) {
-              content += $('#nb > div:nth-child(' + i + ')').html();
+              content += $('#nb > .res-' + i).html() || 'あぼーん';
             }
           }
         });
@@ -154,35 +155,36 @@ try {
       var hidePop = function (a) {
         $('.pop').fadeOut('normal');
       };
-              var th = 600;
-        var unveil = function() {
-          var n = document.getElementsByClassName('lazy');
-          var len = n.length;
-          if (len == 0) {
-            return;
-          }
-          var wh = screen.height + th;
-          for (var i = 0; i < len; i++) {
-            var bound = n[i].getBoundingClientRect();
-            if (bound.top > wh || bound.bottom < 0 - th) continue;
-            var ele = n[i];
-            ele.setAttribute('src', ele.getAttribute('data-src'));
-            ele.removeAttribute('data-src');
-            ele.removeAttribute('class');
-            i--;
-            len--;
-          }
+      var th = 600;
+      var unveil = function () {
+        var n = document.getElementsByClassName('lazy');
+        var len = n.length;
+        if (len == 0) {
+          return;
         }
-        var timer = null;
-        var listen = function() {
-          clearTimeout(timer);
-          timer = setTimeout(unveil, 75);
+        var wh = screen.height + th;
+        for (var i = 0; i < len; i++) {
+          var bound = n[i].getBoundingClientRect();
+          if (bound.top > wh || bound.bottom < 0 - th) continue;
+          var ele = n[i];
+          ele.setAttribute('src', ele.getAttribute('data-src'));
+          ele.removeAttribute('data-src');
+          ele.removeAttribute('class');
+          i--;
+          len--;
         }
-        window.addEventListener('resize', listen);
-        window.addEventListener('scroll', listen);
-        listen();
+      }
+      var timer = null;
+      var listen = function () {
+        clearTimeout(timer);
+        timer = setTimeout(unveil, 75);
+      }
+      window.addEventListener('resize', listen);
+      window.addEventListener('scroll', listen);
+      listen();
       var list = JSON.parse(localStorage[location.href] || '{}');
       var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
+      var ngw = JSON.parse(window.localStorage.getItem('ngw') || '[]');
       var conv = function (s) {
         var body = s;
         var b1 = body.match(/&gt;&gt;[\d,-]+/g);
@@ -202,7 +204,7 @@ try {
         if (b3) {
           b3.forEach(function (ele) {
             var link = (ele[0] == 'h') ? ele : 'h' + ele;
-            if (link.substr( - 4).match(/.[(jpg)(png)(gif)]/)) body = body.replace(ele, '<img class="lazy" data-src="' + link + '">');
+            if (link.substr( - 4).match(/\.((jpg)|(png)|(gif))/)) body = body.replace(ele, '<img class="lazy" data-src="' + link + '">');
              else body = body.replace(ele, '<a href="' + link + '">' + ele + '</a>');
           });
         }
@@ -216,6 +218,12 @@ try {
         }, function (data) {
           var x = [
           ];
+          var len = data.split('\n').length - 1;
+          list[dat] = [
+            a.innerText,
+            len
+          ];
+          localStorage[location.href] = JSON.stringify(list);
           data.split('\n').forEach(function (ele, i) {
             var s = ele.split('<>');
             if (!s[3]) {
@@ -223,6 +231,9 @@ try {
             }
             var ids = s[2].split(' ID:');
             if (ng.indexOf(ids[1]) != - 1) return null;
+            for (var j = 0; j < ngw.length; j++) {
+              if (s[3].match(ngw[j])) return null;
+            }
             x.push({
               i: i + 1,
               name: s[0],
@@ -239,16 +250,11 @@ try {
             bbs: bbs,
             dat: dat
           }));
-          list[dat] = [
-            a.innerText,
-            x.length
-          ];
           $('#nb .body span').mouseover(showPop);
           $('#nb .body span').mouseout(hidePop);
           listen();
-          localStorage[location.href] = JSON.stringify(list);
           var td = a.parentElement.parentElement;
-          td.children[1].innerHTML = x.length.toString();
+          td.children[1].innerHTML = len.toString();
           td.setAttribute('style', '');
           a.setAttribute('style', 'color:gray;');
         });
