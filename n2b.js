@@ -2,7 +2,7 @@
 // @name        ネッブラ
 // @namespace   n2b
 // @description next産専ブラ
-// @include     /http://next2ch.net/[^/]+/$/
+// @include     /http://next2ch.net/[^/]+/\D*/
 // @version     0
 // @grant       none
 // @require     
@@ -10,7 +10,6 @@
 // ==/UserScript==
 try {
   var table = $('table#threads');
-  table.after('<div class=\'clearfix\'></div>');
   table.before('<div id=\'nb\' class=\'pull-right span6\'></div>');
   table.after('<div class=\'nb2\'></div>');
   $('.nb2').css({
@@ -25,10 +24,12 @@ try {
   css.textContent = 'table#threads>tbody>tr>td>a{max-width:300px}' +
   'tr > :nth-child(3) {display: none;}' +
   '.pop{position: absolute;background-color: lightgray;padding:6px;color:black;}' +
-  '#nb > .res > .body > span{color:blue;}' +
-  '#nb > .res > .body img{max-width:200px;heigth:200px;}';
+  '#nb{overflow: auto;height:550px;}' +
+  '#nb > .res > .body > span{color:blue;padding:15px;}' +
+  '#nb > .res > .body img{max-width: 300px;max-height: 300px;}' +
+  '.container>form{display:none;}.container>h3{display:none;}footer hr{display:none;}';
   document.head.appendChild(css);
-  $('.title').after('<a onclick="localStorage.clear()">reset</a>');
+  $('.title').after('<a class=\'pull-right\' onclick="localStorage.clear()">reset</a>');
   var list = JSON.parse(window.localStorage.getItem(location.href) || '{}');
   var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
   var ngw = JSON.parse(window.localStorage.getItem('ngw') || '[]');
@@ -59,7 +60,7 @@ try {
         ele.css({
           color: 'orangered'
         });
-        ele.children('td:nth-child(2)').append('<span>+' + p + '</span>');
+        ele.children('td:nth-child(2)').append('<span>(+' + p + ')</span>');
       } else {
         a.css({
           color: 'gray'
@@ -105,7 +106,7 @@ try {
         }
       }
       var tmp = '{{#cs}}' +
-      '<div class="res res-{{i}}">' +
+      '<div class="res" id="res-{{i}}">' +
       '<span class="resnum">{{i}}</span>' +
       '<span class="name">{{name}}</span>' +
       '{{#mail}}<span class="mail">[{{mail}}]</span>{{/mail}}' +
@@ -142,11 +143,11 @@ try {
         var x = id.split(',');
         var content = '';
         x.forEach(function (e) {
-          if (e.indexOf('-') == - 1) content += $('#nb > .res-' + e).html() || 'あぼーん';
+          if (e.indexOf('-') == - 1) content += $('#nb > #res-' + e).html() || 'あぼーん';
            else {
             var xs = e.split('-');
             for (var i = xs[0] | 0; i <= xs[1] | 0; i++) {
-              content += $('#nb > .res-' + i).html() || 'あぼーん';
+              content += $('#nb > #res-' + i).html() || 'あぼーん';
             }
           }
         });
@@ -155,7 +156,7 @@ try {
       var hidePop = function (a) {
         $('.pop').fadeOut('normal');
       };
-      var th = 600;
+      var th = 300;
       var unveil = function () {
         var n = document.getElementsByClassName('lazy');
         var len = n.length;
@@ -177,11 +178,10 @@ try {
       var timer = null;
       var listen = function () {
         clearTimeout(timer);
-        timer = setTimeout(unveil, 75);
+        timer = setTimeout(unveil, 200);
       }
       window.addEventListener('resize', listen);
       window.addEventListener('scroll', listen);
-      listen();
       var list = JSON.parse(localStorage[location.href] || '{}');
       var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
       var ngw = JSON.parse(window.localStorage.getItem('ngw') || '[]');
@@ -212,6 +212,7 @@ try {
       }
       var onclickX = function (event) {
         var a = event.target;
+        if (a.tagName == 'TD') a = a.children[0];
         document.title = a.innerText;
         var dat = a.getAttribute('data');
         $.get(location.href + 'dat/' + dat + '.dat', {
@@ -259,10 +260,8 @@ try {
           a.setAttribute('style', 'color:gray;');
         });
       };
-      $('table#threads>tbody>tr').each(function (i, e) {
-        if (i == 0) return;
-        var a = e.children[0].children[0];
-        a.addEventListener('click', onclickX, true);
+      $('table#threads>tbody>tr>td:nth-child(1)').each(function (i, e) {
+        e.addEventListener('click', onclickX, true);
       });
     });
   });
