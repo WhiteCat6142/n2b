@@ -22,6 +22,7 @@ try {
   '.container>form{display:none;}.container>h3{display:none;}footer hr{display:none;}';
   document.head.appendChild(css);
   var table = $('table#threads');
+  var tr = $('table#threads>tbody>tr');
   table.before('<div id=\'nb\' class=\'pull-right span7\'></div>');
   table.after('<div class=\'nb2 pull-left span4\'></div>');
   table.appendTo('.nb2');
@@ -32,19 +33,21 @@ try {
   var eachFunc = function (index, ele) {
     if (index == 0) return;
     ele = $(ele);
-    if (ng.indexOf(ele.children('td:nth-child(3)').text()) != - 1) {
+    var children = ele.children();
+    if (ng.indexOf(children.eq(2).text()) != - 1) {
       ele.hide();
       return;
     }
-    var a = ele.children('td:first').children('a');
+    var a = children.eq(0).children('a');
+    var text = a.text();
     for (var i = 0; i < ngw.length; i++) {
-      if (a.text().match(ngw[i])) {
+      if (text.match(ngw[i])) {
         ele.hide();
         return;
       }
     }
     var dat = a.attr('href').match(/\/([0-9]+)/) [1];
-    var num = ele.children('td:nth-child(2)').text() | 0;
+    var num = children.eq(1).text() | 0;
     a.attr('data', dat);
     a.attr('href', 'javascript:void(0)');
     if (list[dat]) {
@@ -56,7 +59,7 @@ try {
         ele.css({
           color: 'orangered'
         });
-        ele.children('td:nth-child(2)').append('<span>(+' + p + ')</span>');
+        children.eq(1).append('<span>(+' + p + ')</span>');
       } else {
         a.css({
           color: 'gray'
@@ -64,7 +67,7 @@ try {
       }
     }
   };
-  $('table#threads>tbody>tr').each(eachFunc);
+  tr.each(eachFunc);
   if (!String.fromCodePoint) {
     /*!
     * ES6 Unicode Shims 0.1
@@ -169,9 +172,6 @@ try {
   }
   window.addEventListener('resize', listen);
   $('#nb').get(0).addEventListener('scroll', listen);
-  var list = JSON.parse(localStorage[location.href] || '{}');
-  var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
-  var ngw = JSON.parse(window.localStorage.getItem('ngw') || '[]');
   var conv = function (s) {
     var body = s;
     var b1 = body.match(/&gt;&gt;[\d,-]+/g);
@@ -197,44 +197,32 @@ try {
     }
     return body;
   }
-  var get = function (url, o, callback) {
-    $.ajax({
-      url: url,
-      timeout: 10000,
-      headers: {
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0',
-        'Expires': 0
-      }
-    }).done(function (data, status, xhr) {
-      callback(data);
-    }).fail(function (xhr, status, error) {
-      console.log(status);
-      console.log(error);
-      console.log(xhr);
-    });
-  };
+  var nb = $('#nb');
   var onclickX = function (event) {
     var a = event.target;
     if (a.tagName == 'TD') a = a.children[0];
     document.title = a.innerText;
     var dat = a.getAttribute('data');
-    get(location.href + 'dat/' + dat + '.dat', {
+    $.get(location.href + 'dat/' + dat + '.dat', {
     }, function (data) {
       var x = [
       ];
       var arr = data.split('\n');
       arr.pop();
       var len = arr.length;
+      var td = a.parentElement.parentElement;
+      td.children[1].innerHTML = len.toString();
+      td.setAttribute('style', null);
+      a.setAttribute('style', 'color:gray;');
       arr.forEach(function (ele, i) {
         var s = ele.split('<>');
         if (!s[3]) {
-          return null;
+          return;
         }
         var ids = s[2].split(' ID:');
-        if (ng.indexOf(ids[1]) != - 1) return null;
+        if (ng.indexOf(ids[1]) != - 1) return;
         for (var j = 0; j < ngw.length; j++) {
-          if (s[3].match(ngw[j])) return null;
+          if (s[3].match(ngw[j])) return;
         }
         x.push({
           i: i + 1,
@@ -246,34 +234,31 @@ try {
         });
       });
       var bbs = location.href.match(/next2ch\.net\/([^\/]+)\//) [1];
-      $('#nb').html(tmpl.render({
+      nb.html(tmpl.render({
         cs: x
       }) + post.render({
         bbs: bbs,
         dat: dat
       }));
-      $('#nb .body span').mouseover(showPop);
-      $('#nb .body span').mouseout(hidePop);
+      var sp = $('#nb .body span');
+      sp.mouseover(showPop);
+      sp.mouseout(hidePop);
       listen();
       if (list[dat]) {
         var d = list[dat];
-        var p = $('#res-' + (d[1])).offset().top - $('#res-1').offset().top + 12;
-        $('#nb').scrollTop(p);
+        var p = $('#res-' + d[1]).offset().top - $('#res-1').offset().top + 12;
+        nb.scrollTop(p);
       } else {
-        $('#nb').scrollTop(0);
+        nb.scrollTop(0);
       }
       list[dat] = [
         a.innerText,
         len
       ];
-      //localStorage[location.href] = JSON.stringify(list);
-      var td = a.parentElement.parentElement;
-      td.children[1].innerHTML = len.toString();
-      td.setAttribute('style', null);
-      a.setAttribute('style', 'color:gray;');
+      localStorage[location.href] = JSON.stringify(list);
     });
   };
-  $('table#threads>tbody>tr>td:nth-child(1)').click(onclickX);
+  tr.children('td:nth-child(1)').click(onclickX);
 } catch (e) {
   console.log(e);
 }
