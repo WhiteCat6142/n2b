@@ -2,33 +2,29 @@
 // @name        ネッブラ
 // @namespace   n2b
 // @description next産専ブラ
-// @include     /http://next2ch.net/[^/]+/\D*/
+// @include     /http://next2ch.net/[^/]+/\D*$/
 // @version     0
 // @grant       none
 // @require     
 // @author      WhiteCat6142
 // ==/UserScript==
 try {
-  var table = $('table#threads');
-  table.before('<div id=\'nb\' class=\'pull-right span6\'></div>');
-  table.after('<div class=\'nb2\'></div>');
-  $('.nb2').css({
-    width: '45%',
-    height: '500px',
-    float: 'left',
-    overflow: 'auto'
-  });
-  table.appendTo('.nb2');
   var css = document.createElement('style');
   css.setAttribute('type', 'text/css');
-  css.textContent = 'table#threads>tbody>tr>td>a{max-width:300px}' +
+  css.textContent = '' +
+  'table#threads>tbody>tr>td{max-width:250px;}' +
   'tr > :nth-child(3) {display: none;}' +
   '.pop{position: absolute;background-color: lightgray;padding:6px;color:black;}' +
   '#nb{overflow: auto;height:550px;}' +
-  '#nb > .res > .body > span{color:blue;padding:15px;}' +
+  '.nb2{overflow: auto;height:550px;margin-left: -20px;}' +
+  '#nb > .res > .body > span{color:blue;padding:10px;}' +
   '#nb > .res > .body img{max-width: 300px;max-height: 300px;}' +
   '.container>form{display:none;}.container>h3{display:none;}footer hr{display:none;}';
   document.head.appendChild(css);
+  var table = $('table#threads');
+  table.before('<div id=\'nb\' class=\'pull-right span7\'></div>');
+  table.after('<div class=\'nb2 pull-left span4\'></div>');
+  table.appendTo('.nb2');
   $('.title').after('<a class=\'pull-right\' onclick="localStorage.clear()">reset</a>');
   var list = JSON.parse(window.localStorage.getItem(location.href) || '{}');
   var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
@@ -181,7 +177,7 @@ try {
         timer = setTimeout(unveil, 200);
       }
       window.addEventListener('resize', listen);
-      window.addEventListener('scroll', listen);
+      $('#nb').get(0).addEventListener('scroll', listen);
       var list = JSON.parse(localStorage[location.href] || '{}');
       var ng = JSON.parse(window.localStorage.getItem('ngid') || '[]');
       var ngw = JSON.parse(window.localStorage.getItem('ngw') || '[]');
@@ -210,22 +206,36 @@ try {
         }
         return body;
       }
+      var get = function (url, o, callback) {
+        $.ajax({
+          url: url,
+          timeout: 10000,
+          headers: {
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0',
+            'Expires': 0
+          }
+        }).done(function (data, status, xhr) {
+          callback(data);
+        }).fail(function (xhr, status, error) {
+          console.log(status);
+          console.log(error);
+          console.log(xhr);
+        });
+      };
       var onclickX = function (event) {
         var a = event.target;
         if (a.tagName == 'TD') a = a.children[0];
         document.title = a.innerText;
         var dat = a.getAttribute('data');
-        $.get(location.href + 'dat/' + dat + '.dat', {
+        get(location.href + 'dat/' + dat + '.dat', {
         }, function (data) {
           var x = [
           ];
-          var len = data.split('\n').length - 1;
-          list[dat] = [
-            a.innerText,
-            len
-          ];
-          localStorage[location.href] = JSON.stringify(list);
-          data.split('\n').forEach(function (ele, i) {
+          var arr = data.split('\n');
+          arr.pop();
+          var len = arr.length;
+          arr.forEach(function (ele, i) {
             var s = ele.split('<>');
             if (!s[3]) {
               return null;
@@ -254,6 +264,18 @@ try {
           $('#nb .body span').mouseover(showPop);
           $('#nb .body span').mouseout(hidePop);
           listen();
+          if (list[dat]) {
+            var d = list[dat];
+            var p = $('#res-' + (d[1])).offset().top - $('#res-1').offset().top + 12;
+            $('#nb').scrollTop(p);
+          } else {
+            $('#nb').scrollTop(0);
+          }
+          list[dat] = [
+            a.innerText,
+            len
+          ];
+          localStorage[location.href] = JSON.stringify(list);
           var td = a.parentElement.parentElement;
           td.children[1].innerHTML = len.toString();
           td.setAttribute('style', '');
